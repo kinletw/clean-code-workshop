@@ -8,6 +8,12 @@ export type Match = {
   players: number;
 };
 
+export type ExpandedMatch = Match & {
+  game: Game;
+  amount: number;
+  gameCredits: number;
+};
+
 export type Games = {
   [gameId: string]: Game;
 };

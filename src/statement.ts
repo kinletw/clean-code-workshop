@@ -1,49 +1,49 @@
-import { Game, Games, Invoice } from "./types";
+import { Games, Invoice } from "./types";
+import { createStatementData, StatementData } from "./createStatementData";
 
 export function statement(invoice: Invoice, games: Games) {
-  let totalAmount = 0;
-  let gameCredits = 0;
-  let result = `Statement for ${invoice.customer}\n`;
-  const format = new Intl.NumberFormat("en-US", {
+  return renderPlainText(createStatementData(invoice, games));
+}
+
+function renderPlainText(data: StatementData) {
+  let result = `Statement for ${data.customer}\n`;
+  for (const match of data.matches) {
+    result += ` ${match.game.name}: ${usdFor(match.amount)} (${
+      match.players
+    } players)\n`;
+  }
+
+  result += `Amount owed is ${usdFor(data.totalAmount)}\n`;
+  result += `You earned ${data.totalGameCredits} credits\n`;
+  return result;
+}
+
+export function htmlStatement(invoice: Invoice, games: Games) {
+  return renderHtmlStatement(createStatementData(invoice, games));
+}
+
+export function renderHtmlStatement(data: StatementData) {
+  let result = `<h1>Statement for <b>${data.customer}</b></h1>`;
+  result +=
+    "<table>" +
+    "<thead><tr><th>Game</th><th>Players</th><th>Cost</th></tr></thead>" +
+    "<tbody>";
+  for (const match of data.matches) {
+    result += `<tr><td>${match.game.name}</td><td>${
+      match.players
+    }</td><td>${usdFor(match.amount)}</td>`;
+  }
+  result += "</tbody></table>";
+
+  result += `<p>Amount owed is <em>${usdFor(data.totalAmount)}</em></p`;
+  result += `<p>You earned <em>${data.totalGameCredits}</em> credits</p>`;
+  return result;
+}
+
+function usdFor(price: number) {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
-  }).format;
-  for (const m of invoice.matches) {
-    const g: Game = games[m.gameID];
-    let thisAmount = 0;
-    switch (g.type) {
-      case "shooter":
-        thisAmount = 400;
-        if (m.players > 30) {
-          thisAmount += 10 * (m.players - 30);
-        }
-        break;
-      case "racing":
-        thisAmount = 300;
-        if (m.players > 20) {
-          thisAmount += 100 + 5 * (m.players - 20);
-        }
-        thisAmount += 3 * m.players;
-        break;
-      default:
-        throw new Error(`Unknown type: ${g.type}`);
-    }
-
-    // add game credits
-    gameCredits += Math.max(m.players - 30, 0);
-    // add extra credit for every ten racing players
-    if ("racing" == g.type) gameCredits += Math.floor(m.players / 10);
-
-    // print line for this match
-    result += ` ${g.name}: ${format(thisAmount / 100)} (${
-      m.players
-    } players)\n`;
-
-    totalAmount += thisAmount;
-  }
-
-  result += `Amount owed is ${format(totalAmount / 100)}\n`;
-  result += `You earned ${gameCredits} credits\n`;
-  return result;
+  }).format(price / 100);
 }
