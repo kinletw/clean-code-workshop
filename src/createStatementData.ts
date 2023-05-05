@@ -7,13 +7,7 @@
  * Temp variables
  */
 import { ExpandedMatch, Games, Invoice, Match } from "./types";
-
-// Naming {context}{result}{adj}(params)
-
-// Split Phase
-// 2 Phases:
-// 1. Calculating
-// 2. Formatting
+import { MatchCalculator } from "./matchCalculator";
 
 export type StatementData = {
   customer: string;
@@ -30,44 +24,19 @@ export function createStatementData(invoice: Invoice, games: Games) {
   statementData.totalGameCredits = totalGameCredits(statementData.matches);
 
   function expandMatch(match: Match) {
+    let matchCalculator: MatchCalculator = createMatchCalculator(match);
     const result = Object.assign({}, match) as ExpandedMatch;
     result.game = gameFor(result);
-    result.amount = amountFor(result);
-    result.gameCredits = gameCreditsFor(result);
+    result.amount = matchCalculator.amount;
+    result.gameCredits = matchCalculator.gameCredits;
     return result;
 
+    function createMatchCalculator(match: Match): MatchCalculator {
+      const GameMatchCalculator = gameFor(match).matchCalculator;
+      return new GameMatchCalculator(match, gameFor(match));
+    }
     function gameFor(match: Match) {
       return games[match.gameID];
-    }
-
-    function amountFor(match: ExpandedMatch) {
-      let result = 0;
-      switch (match.game.type) {
-        case "shooter":
-          result = 400;
-          if (match.players > 30) {
-            result += 10 * (match.players - 30);
-          }
-          break;
-        case "racing":
-          result = 300;
-          if (match.players > 20) {
-            result += 100 + 5 * (match.players - 20);
-          }
-          result += 3 * match.players;
-          break;
-        default:
-          throw new Error(`Unknown type: ${match.game.type}`);
-      }
-      return result;
-    }
-
-    function gameCreditsFor(match: ExpandedMatch) {
-      let gameCredits = Math.max(match.players - 30, 0);
-      // add extra credit for every ten racing players
-      if ("racing" == match.game.type)
-        gameCredits += Math.floor(match.players / 10);
-      return gameCredits;
     }
   }
 
